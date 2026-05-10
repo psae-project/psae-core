@@ -1,0 +1,29 @@
+# Default trading universe - S&P 500 sector ETFs + liquid single names
+sector_etfs:
+  - XLK   # Technology
+  - XLF   # Financials
+  - XLV   # Health Care
+  - XLI   # Industrials
+  - XLE   # Energy
+  - XLU   # Utilities
+  - XLP   # Consumer Staples
+  - XLY   # Consumer Discretionary
+  - XLB   # Materials
+  - XLRE  # Real Estate
+  - XLC   # Communication Services
+
+policy_etfs:
+  - JETS  # Airlines (trade/tariff sensitive)
+  - SLX   # Steel (tariff beneficiary)
+  - TAN   # Solar (energy policy)
+  - ICLN  # Clean Energy
+  - FXI   # China Large Cap (US-China trade)
+  - ITA   # Aerospace & Defense
+  - KBE   # Banks (monetary policy)
+  - TLT   # Long-Duration Treasuries
+  - GLD   # Gold (safe haven)
+
+hedges:
+  - SPY   # Primary market hedge
+  - QQQ   # Tech hedge
+  - IWM   # Small cap hedge
