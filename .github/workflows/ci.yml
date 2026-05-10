@@ -1,13 +1,28 @@
 name: CI
+
 on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  release:
+    types: [published]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff mypy
+      - run: ruff check .
+      - run: ruff format --check .
+
   test:
     runs-on: ubuntu-latest
+    needs: lint
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
@@ -16,6 +31,54 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
       - run: pip install -e ".[dev]"
-      - run: ruff check .
-      - run: pytest tests/ -v --cov --cov-report=xml
+      - run: pytest tests/ -v --cov=psae --cov-report=xml --cov-report=term-missing
+      - uses: codecov/codecov-action@v4
+        if: matrix.python-version == '3.11'
+        with:
+          files: coverage.xml
+          flags: psae-core
+          fail_ci_if_error: false
+
+  publish-testpypi:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'release' && github.event.action == 'published'
+    environment: testpypi
+    permissions:
+      id-token: write   # OIDC — no token needed for TestPyPI trusted publisher
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install build
+      - run: python -m build
+      - name: Publish to TestPyPI (free, no token needed with OIDC)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  publish-pypi:
+    runs-on: ubuntu-latest
+    needs: publish-testpypi
+    if: github.event_name == 'release' && github.event.action == 'published'
+    environment: pypi
+    permissions:
+      id-token: write   # OIDC trusted publisher — no PYPI_TOKEN secret needed
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install build
+      - run: python -m build
+      - name: Publish to PyPI (OIDC first, fallback to token)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+        env:
+          # OIDC is tried first (free, no secret). Falls back to token if OIDC not configured.
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
